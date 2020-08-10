@@ -1,9 +1,13 @@
 version: '3'
 
+networks:
+  order-network:
+    external: true
+
 services: 
   mysql:
     image: mysql:5.7
-    container_name: nestjs-mysql
+    container_name: order-mysql
     restart: always
     ports: 
       - 3310:3306
@@ -15,25 +19,31 @@ services:
       MYSQL_DATABASE: 'nestjs'
       MYSQL_USER: 'nestjs'
       MYSQL_PASSWORD: 'nestjs'
-  
+    networks: 
+      - order-network
+
   redis:
     image: redis:latest
-    container_name: nestjs-redis
+    container_name: order-redis
     command: redis-server --requirepass nestjs
     ports:
-      - 6379:6379
+      - 6380:6379
     volumes: 
       - ./data/redis:/data
+    networks: 
+      - order-network
 
   rabbitmq:
     image: rabbitmq:3.8-rc-management
-    container_name: nestjs-rabbitmq
+    container_name: order-rabbitmq
     restart: always
     ports: 
-      - 5672:5672
-      - 15672:15672
+      - 5673:5672
+      - 15673:15672
     volumes: 
       - ./data/rabbitmq:/var/lib/rabbitmq
     environment:
       - RABBITMQ_DEFAULT_USER=nestjs
       - RABBITMQ_DEFAULT_PASS=nestjs
+    networks: 
+      - order-network

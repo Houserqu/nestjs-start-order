@@ -1,16 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { User } from '@entity/User';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/CreateUserDto.dto';
 import { ErrorException, err } from '@common/error.exception';
 import { CreateWeAppUserDto } from './dto/CreateWeAppUserDto.dto';
+import { RabbitService } from '@modules/mq/rabbit.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @Inject(forwardRef(() => RabbitService))
+    private readonly rabbitService: RabbitService
   ) {}
 
   async findOne(phone: string): Promise<User | undefined> {
@@ -37,6 +40,18 @@ export class UserService {
     });
   }
 
+  /**
+   * 写入创建用户的 mq 消息
+   * @param createUserDto 
+   */
+  async createMessage(createUserDto: CreateUserDto): Promise<Boolean> {
+    return await this.rabbitService.publishUser(createUserDto)
+  }
+
+  /**
+   * 消费消息，创建用户
+   * @param createUserDto 
+   */
   async create(createUserDto: CreateUserDto): Promise<User | undefined> {
     const findUser = await this.userRepository.findOne({
       where: {
@@ -48,10 +63,22 @@ export class UserService {
       throw new ErrorException(err.CREATE_PHONE_EXITED)
     }
 
+    // 创建用户
     try {
       const user = new User();
       user.phone = createUserDto.phone;
       user.nickname = createUserDto.nickname;
+      user.password = createUserDto.password;
+      user.remark = createUserDto.remark;
+      user.type = createUserDto.type;
+      user.openid = createUserDto.openid;
+      user.unionid = createUserDto.unionid;
+      user.avatarUrl = createUserDto.avatarUrl;
+      user.country = createUserDto.country;
+      user.gender = createUserDto.gender;
+      user.province = createUserDto.province;
+      user.city = createUserDto.city;
+      user.appid = createUserDto.appid;
       return this.userRepository.save(user)
     } catch (e) {
       throw new ErrorException(err.CREATE_USER_FAILD, e.message)
