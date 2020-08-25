@@ -1,6 +1,8 @@
 import {Logger} from "typeorm";
 import { Logger as LoggerService } from './logger.service'
+import { Injectable } from "@nestjs/common";
 
+@Injectable()
 export class TypeOrmLogger implements Logger {
   constructor(
     private readonly loggerService: LoggerService

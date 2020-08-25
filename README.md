@@ -233,6 +233,7 @@ RBAC（基于角色的权限控制）是企业软件常用的权限管理技术�
 
 ```bash
 docker-compose -f "docker-compose.yml" up -d
+docker-compose -f "docker-compose-prod.yml" up -d
 ```
 
 **默认暴露到宿主的端口**

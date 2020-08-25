@@ -1,7 +1,8 @@
 {
   "apps": {
-    "name": "nestjs-start",
+    "name": "nestjs-order",
     "script": "dist/main.js",
+    "instances" : "max",
     "cwd": "./",
     "args": "",
     "interpreter": "",

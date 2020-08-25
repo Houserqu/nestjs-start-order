@@ -1,14 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@modules/app/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
-import { ErrorException, err } from './common/error.exception';
 import * as _ from 'lodash'
 import { Logger } from '@modules/logger/logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: false
+    logger: console
   });
 
   app.useLogger(app.get(Logger))
@@ -28,15 +26,6 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, options);
     SwaggerModule.setup('swagger', app, document);
   }
-
-  // 全局参数校验 pipe
-  app.useGlobalPipes(new ValidationPipe({
-    transform: true, 
-    // 自定义异常
-    exceptionFactory: (errors) => new ErrorException(
-      err.PARAMS_ERROR, _.flatten(errors.filter(item => !!item.constraints)
-      .map(item => Object.values(item.constraints))
-    ))}));
 
   await app.listen(8000);
 }

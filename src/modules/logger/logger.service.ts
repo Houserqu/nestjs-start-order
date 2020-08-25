@@ -1,10 +1,14 @@
-import { Injectable, HttpService } from '@nestjs/common';
+import { Injectable, HttpService, LoggerService } from '@nestjs/common';
 import { isProd } from '@utils/env';
 import { Request } from 'express';
 
 @Injectable()
-export class Logger {
-  public loggerDB = console
+export class Logger implements LoggerService{
+  public loggerDB: Console 
+
+  constructor() {
+    this.loggerDB = console
+  }
 
   log(message: string) {
     console.log(message)

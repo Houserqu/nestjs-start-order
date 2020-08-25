@@ -6,6 +6,8 @@ import { CreateUserDto } from './dto/CreateUserDto.dto';
 import { ErrorException, err } from '@common/error.exception';
 import { CreateWeAppUserDto } from './dto/CreateWeAppUserDto.dto';
 import { RabbitService } from '@modules/mq/rabbit.service';
+import { RedisService } from '@modules/cache/redis.service';
+import * as _ from 'lodash';
 
 @Injectable()
 export class UserService {
@@ -13,7 +15,8 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @Inject(forwardRef(() => RabbitService))
-    private readonly rabbitService: RabbitService
+    private readonly rabbitService: RabbitService,
+    private readonly redisService: RedisService
   ) {}
 
   async findOne(phone: string): Promise<User | undefined> {
@@ -23,8 +26,38 @@ export class UserService {
       },
     });
   }
-
+ 
+  /**
+   * 根据id查用户（经过缓存）
+   * @param id 
+   */ 
   async findUserByID(id: number): Promise<User | undefined> {
+    const cacheUser = await this.redisService.command('HGETALL', 'USERS_' + id)
+    if(cacheUser) {
+      return cacheUser
+    }
+
+    const user = await this.userRepository.findOne({
+      where: {
+        id,
+      },
+    });
+
+
+    if(!user) {
+      throw new ErrorException(err.USER_INFO_FAIL)
+    } 
+    
+    // 可以不需要 await，让接口更快的返回数据
+    this.redisService.command('HMSET', 'USERS_' + user.id, _.flatten(_.toPairs(_.omit(user, ['password']))))
+    return user
+  }
+
+  /**
+   * 根据id查用户（不经过缓存）
+   * @param id 
+   */
+  async findUserByIDNoChache(id: number): Promise<User | undefined> {
     return await this.userRepository.findOne({
       where: {
         id,
@@ -53,15 +86,15 @@ export class UserService {
    * @param createUserDto 
    */
   async create(createUserDto: CreateUserDto): Promise<User | undefined> {
-    const findUser = await this.userRepository.findOne({
-      where: {
-        phone: createUserDto.phone,
-      },
-    });
+    // const findUser = await this.userRepository.findOne({
+    //   where: {
+    //     phone: createUserDto.phone,
+    //   },
+    // });
 
-    if(findUser) {
-      throw new ErrorException(err.CREATE_PHONE_EXITED)
-    }
+    // if(findUser) {
+    //   throw new ErrorException(err.CREATE_PHONE_EXITED)
+    // }
 
     // 创建用户
     try {

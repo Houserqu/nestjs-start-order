@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from '../user/user.module';
@@ -16,6 +16,9 @@ import { ConsumerModule } from '@modules/consumer/consumer.module';
 import { LoggerModule } from '@modules/logger/logger.module';
 import { AllExceptionsFilter } from '@src/common/allException.filter';
 import { TransformInterceptor } from '@src/common/transform.interceptor';
+import { ValidationPipe } from '@nestjs/common';
+import { ErrorException, err } from '../../common/error.exception';
+import * as _ from 'lodash'
 
 /**
  * 根模块，所有需要使用的模块都需要在根模块引入
@@ -47,6 +50,16 @@ import { TransformInterceptor } from '@src/common/transform.interceptor';
     {
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor
+    },
+    {
+      provide: APP_PIPE,
+      useFactory: () => new ValidationPipe({
+        transform: true, 
+        // 自定义异常
+        exceptionFactory: (errors) => new ErrorException(
+          err.PARAMS_ERROR, _.flatten(errors.filter(item => !!item.constraints)
+          .map(item => Object.values(item.constraints))
+        ))})
     },
     AppService,
     {

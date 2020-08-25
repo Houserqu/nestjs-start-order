@@ -27,10 +27,11 @@ export class RabbitService {
       conn.createChannel().then(channel => {
         this.channel = channel
         channel.assertQueue('user', {durable: false})
+        channel.prefetch(1, false)
         // 创建消费者（一般在不同的程序里）
         channel.consume('user', async (msg) => {   
-          that.consumerService.createUser(msg, channel)
-        })
+          await that.consumerService.createUser(msg, channel)
+        }, { noAck: false })
       })
     })
   }

@@ -5,13 +5,16 @@ import { User } from '@modules/user/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Logger } from '@modules/logger/logger.service';
+import { RedisService } from '@modules/cache/redis.service';
+import * as _ from 'lodash';
 
 @Injectable()
 export class ConsumerService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly redisService: RedisService
   ){}
 
   /**
@@ -40,18 +43,6 @@ export class ConsumerService {
    * @param createUserDto 
    */
   async create(createUserDto: CreateUserDto): Promise<User | undefined> {
-    const findUser = await this.userRepository.findOne({
-      where: [{
-        phone: createUserDto.phone,
-      }, {
-        unionid: createUserDto.unionid
-      }],
-    });
-
-    if(findUser) {
-      throw new ErrorException(err.CREATE_PHONE_EXITED)
-    }
-
     // 创建用户
     try {
       const user = new User();
@@ -68,9 +59,15 @@ export class ConsumerService {
       user.province = createUserDto.province;
       user.city = createUserDto.city;
       user.appid = createUserDto.appid;
-      return this.userRepository.save(user)
+      
+      const createUser = await this.userRepository.save(user)
+
+      // 写入用户信息到 redis
+      await this.redisService.command('HMSET', 'USERS_' + createUser.id, _.flatten(_.toPairs(_.omit(user, ['password']))))
+      return createUser
     } catch (e) {
-      throw new ErrorException(err.CREATE_USER_FAILD)
+      console.log(e.message)
+      // throw new ErrorException(err.CREATE_USER_FAILD)
     }
   }
 }

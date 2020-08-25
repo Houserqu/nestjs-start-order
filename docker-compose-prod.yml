@@ -20,8 +20,6 @@ services:
     image: mysql:5.7
     container_name: order-mysql
     restart: always
-    ports: 
-      - 3310:3306
     volumes: 
       - ./data/mysql:/var/lib/mysql
       - ./doc/mysql-init/:/docker-entrypoint-initdb.d
@@ -36,13 +34,13 @@ services:
   redis:
     image: redis:latest
     container_name: order-redis
-    command: redis-server --requirepass nestjs
-    ports:
-      - 6380:6379
+    command:  redis-server --requirepass nestjs
     volumes: 
       - ./data/redis:/data
-    networks: 
-      - order-network
+    # networks: 
+    #   - order-network
+    ports:
+      - 6380:6379
 
   rabbitmq:
     image: rabbitmq:3.8-rc-management
@@ -58,3 +56,15 @@ services:
       - RABBITMQ_DEFAULT_PASS=nestjs
     networks: 
       - order-network
+  web1:
+    image: nestjs-order:1.0.1
+    container_name: nestjs1
+    volumes: 
+      - ./logs:/usr/src/app/logs
+    networks: 
+      - order-network
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq 
+    
